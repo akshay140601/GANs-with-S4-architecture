@@ -96,3 +96,22 @@ def fid_score(real_images, gen_images, batch_size, inception_network):
     fid_score = calculate_fid(real_activations, gen_activations)
     return fid_score
 
+def inception_score(images):
+    '''
+    Args:
+            images: shape (N, 3, 299, 299) dtype: torch.float32 in range 0-1
+    '''
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Nomalization
+    images = images*2-1
+    # Get the conditional label distribution
+    inception_model = inception_v3(pretrained = True, transform_input = False).to(device)
+    inception_model.eval()
+    pyx = inception_model(images.to(device))
+    pyx = torch.nn.functional.softmax(pyx)
+    # Calculate KL divergence
+    py = torch.mean(pyx, dim=0)
+    kl = pyx * torch.log(pyx/py)
+    is_score = torch.exp(torch.mean(torch.sum(kl, dim=1)))
+    return is_score
+        
