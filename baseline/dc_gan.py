@@ -56,12 +56,38 @@ class Discriminator(nn.Module):
     def forward(self, x):
         return self.discriminator(x)
     
+class Discriminator_strong(nn.Module):
+    def __init__(self, channels_img, features_d):
+        super(Discriminator_strong, self).__init__()
+        self.discriminator = nn.Sequential(
+            nn.Conv2d(channels_img, features_d, kernel_size=4, stride=2, padding=1), 
+            nn.LeakyReLU(0.2),
+            self.layer(features_d, features_d, kernel_size=3, stride=1, padding=1),  # New layer added
+            self.layer(features_d, 2*features_d, kernel_size=4, stride=2, padding=1),
+            self.layer(2*features_d, 2*features_d, kernel_size=3, stride=1, padding=1),  # New layer added
+            self.layer(2*features_d, 4*features_d, kernel_size=4, stride=2, padding=1),
+            self.layer(4*features_d, 4*features_d, kernel_size=3, stride=1, padding=1),  # New layer added
+            self.layer(4*features_d, 8*features_d, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(8*features_d, 1, kernel_size=4, stride=1, padding=0),  # Adjusted stride to maintain output size
+            nn.Sigmoid(),
+        )
+
+    def layer(self, in_channels, out_channels, kernel_size, stride, padding):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding), 
+            nn.BatchNorm2d(out_channels), 
+            nn.LeakyReLU(0.2)  # slope given in the DCGAN paper is 0.2
+        )
+    
+    def forward(self, x):
+        return self.discriminator(x)
+    
 
 def test_case():
     N, in_channels, H, W = 8, 3, 64, 64
     noise_dim = 100
     x = torch.randn((N, in_channels, H, W))
-    disc = Discriminator(in_channels, 8)
+    disc = Discriminator_strong(in_channels, 8)
     assert disc(x).shape == (N, 1, 1, 1), "Discriminator test failed"
     gen = Generator(noise_dim, in_channels, 8)
     z = torch.randn((N, noise_dim, 1, 1))
